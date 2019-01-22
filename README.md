@@ -2,12 +2,20 @@
 
 通过 Gmail 获取所有的Zurich SIS Report Email 并解压成 `CSV` 文件。
 
+然后导出内部错误report并合并。
+
 ## 项目依赖
 
 - [google/apiclient](https://github.com/googleapis/google-api-php-client), [API Ref](https://developers.google.com/resources/api-libraries/documentation/gmail/v1/php/latest/), [Quickstart](https://developers.google.com/gmail/api/quickstart/php)
 
 ## 项目运行
 
+- 安装
+```
+composer global require mmhk/zurich-sis-report-reader:*
+```
+
+- 命令行
 ```bash
 Usage: ./zurich-sis-report-reader [options] [operands]
 

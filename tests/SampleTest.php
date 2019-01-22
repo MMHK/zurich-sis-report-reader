@@ -72,7 +72,7 @@ class SampleTest extends TestCase
              * @var $row \Google_Service_Gmail_Message
              */
             $msg = $this->client
-                ->getMailDeteil($row->getId());
+                ->getMailDetail($row->getId());
 
             print_r($msg);
 //            print_r($msg->getPayload()->getHeaders());
@@ -121,7 +121,7 @@ class SampleTest extends TestCase
         $temp = 'D:\\_Sam\\TestProject\\PHP\\gmail\\geestar\\temp';
         $cert = 'D:\\_Sam\\TestProject\\PHP\\gmail\\code\\tests\\secret';
         $service = new GmailHelper($cert, $temp);
-        $resp = $service->getMailDeteil('1685e42b89aeaeff');
+        $resp = $service->getMailDetail('1685e42b89aeaeff');
 
         var_dump($resp);
 
@@ -148,7 +148,7 @@ class SampleTest extends TestCase
         $temp = 'D:\\_Sam\\TestProject\\PHP\\gmail\\motors\\temp';
         $cert = 'D:\\_Sam\\TestProject\\PHP\\gmail\\code\\tests\\secret';
         $service = new GmailHelper($cert, $temp);
-        $resp = $service->getMailDeteil('168688f83c35e061');
+        $resp = $service->getMailDetail('168688f83c35e061');
 
         var_dump($resp);
 

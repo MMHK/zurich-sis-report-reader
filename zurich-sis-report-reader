@@ -1,5 +1,24 @@
 #!/usr/bin/env php
 <?php
+$vendor_paths = [
+    __DIR__,
+    dirname(__DIR__),
+    dirname(dirname(__DIR__)),
+    dirname(dirname(dirname(__DIR__))),
+];
+$vendor_paths = array_filter($vendor_paths, function ($val) {
+    $autoload_path =  $val.'/vendor/autoload.php';
+    if (file_exists($autoload_path)) {
+        require_once($autoload_path);
+        return true;
+    }
+    return false;
+});
+
+if (empty($vendor_paths)) {
+    die("Reader can not load vendor!\n");
+}
+
 if (php_sapi_name() != 'cli') {
     exit("Please run in cli! \n");
 }
@@ -26,8 +45,6 @@ $config = json_decode(file_get_contents($config_path), 1);
 if (empty($config)) {
     exit("can not open config file,". $config_path);
 }
-
-
 
 $temp_dir = array_get($config, 'temp-dir');
 $report_dir = $temp_dir . '/report';

@@ -105,7 +105,7 @@ class GmailHelper
             ->getData();
     }
 
-    public function getMailDeteil($msg_id) {
+    public function getMailDetail($msg_id) {
         $cache_file = $this->temp_path . '/' . $msg_id . '.json';
         if (file_exists($cache_file)) {
             return json_decode(file_get_contents($cache_file), 1);
@@ -231,7 +231,7 @@ class GmailHelper
              */
             echo sprintf("begin get detail:[%d/%d]\n", $index, $total);
             $index++;
-            return $this->getMailDeteil($row->getId());
+            return $this->getMailDetail($row->getId());
         }, $list);
 
         $has_attachment_list = array_values(array_filter($list, function ($row){
@@ -269,7 +269,7 @@ class GmailHelper
         }
     }
 
-    public function export_error_report($save_dir) {
+    public function export_error_report($save_dir, $combine = true) {
         $rule = $this->temp_path . '/*_SISAPI_UL_INTR_RPT_*.csv';
         $list = glob($rule);
         if (!file_exists($save_dir)) {
@@ -278,6 +278,16 @@ class GmailHelper
         foreach ($list as $row) {
             $dist = $save_dir . '/' . basename($row);
             copy($row, $dist);
+        }
+
+        if ($combine) {
+            $rule = $save_dir . '/*.csv';
+            $list = glob($rule);
+            $content = '';
+            foreach ($list as $row) {
+                $content .= file_get_contents($row);
+            }
+            file_put_contents($save_dir.'/all.csv', $content);
         }
     }
 }
