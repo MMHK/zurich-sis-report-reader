@@ -1,0 +1,49 @@
+{
+    "name": "mmhk/php-gmail-sample",
+    "description": "",
+    "minimum-stability": "stable",
+    "license": "Apache-2.0",
+    "authors": [{
+            "name": "Sam",
+            "email": "sam@mixmedia.com"
+        }
+    ],
+    "require": {
+        "google/apiclient": "v2.2.2",
+        "rappasoft/laravel-helpers": "^1.0",
+        "ulrichsg/getopt-php": "^3.2",
+        "nelexa/zip": "^3.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "6.5.13",
+        "macfja/phar-builder": "0.2.7"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "MMHK\\": "src/"
+        }
+    },
+    "config": {
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "scripts": {
+        "build": [
+            "php -d phar.readonly=0 \"./vendor/macfja/phar-builder/bin/phar-builder\" package composer.json"
+        ]
+    },
+    "extra": {
+        "phar-builder": {
+            "compression": "No",
+            "name": "export-SIS-report.phar",
+            "output-dir": "bin/",
+            "entry-point": "./main.php",
+            "include-dev": false
+        }
+    }
+}

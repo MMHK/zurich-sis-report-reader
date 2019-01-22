@@ -1,0 +1,6 @@
+{
+  "credentials-dir": "D:\\_Sam\\TestProject\\PHP\\gmail\\code\\tests\\secret",
+  "gmail-query": false,
+  "limit": 500,
+  "temp-dir": "D:\\_Sam\\TestProject\\PHP\\gmail\\code\\temp"
+}
