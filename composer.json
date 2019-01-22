@@ -1,5 +1,5 @@
 {
-    "name": "mmhk/php-gmail-sample",
+    "name": "mmhk/zurich-SIS-report-reader",
     "description": "",
     "minimum-stability": "stable",
     "license": "Apache-2.0",
@@ -9,6 +9,7 @@
         }
     ],
     "require": {
+        "php": "^7.0",
         "google/apiclient": "v2.2.2",
         "rappasoft/laravel-helpers": "^1.0",
         "ulrichsg/getopt-php": "^3.2",
@@ -29,9 +30,13 @@
         }
     },
     "config": {
+        "platform": {
+            "php": "7.0.0"
+        },
         "preferred-install": "dist",
         "sort-packages": true
     },
+    "bin": ["zurich-sis-report-reader"],
     "scripts": {
         "build": [
             "php -d phar.readonly=0 \"./vendor/macfja/phar-builder/bin/phar-builder\" package composer.json"
