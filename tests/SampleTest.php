@@ -169,6 +169,20 @@ class SampleTest extends TestCase
         }
     }
 
+    public function test_fix_rm_files() {
+        $temp = 'D:\\_Sam\\TestProject\\PHP\\gmail\\reacingmax\\temp';
+
+        $list = glob($temp.'/*.json');
+        foreach ($list as $row) {
+            $json = json_decode(file_get_contents($row), 1);
+            if (!empty($json['password'])) {
+                $subject = str_replace(' (password)', '', $json['subject']);
+                $json['attachment_hash'] = md5($subject);
+            }
+            file_put_contents($row, json_encode($json));
+        }
+    }
+
     public function test_diff() {
         $t1 = 'SIS API Upload to SIS Report for GeeStar Ltd.- Run Date: 12\/05\/2018';
         $t2 = 'SIS API Upload to SIS Report for GeeStar Ltd. (password) - Run Date: 24\/02\/2018';
