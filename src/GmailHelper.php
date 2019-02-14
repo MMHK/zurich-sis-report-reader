@@ -133,7 +133,7 @@ class GmailHelper
             $header_name = $header->getName();
             if ($header_name == 'Subject') {
                 $subject = $header->getValue();
-                $file_hash = md5(str_replace(' (password)', '', $subject));
+                $file_hash = md5(str_replace(' (password) ', '', $subject));
             }
         });
 
