@@ -31,12 +31,11 @@ class GmailHelper
     public function __construct($cache_path, $temp_path = '/temp')
     {
         $this->cache_path = $cache_path;
-
-        $this->service = $this->getGmailService();
         $this->temp_path = $temp_path;
         if (!file_exists($this->temp_path)) {
             mkdir($this->temp_path, 0777, true);
         }
+        $this->service = $this->getGmailService();
     }
 
     public function getClient()
@@ -87,7 +86,7 @@ class GmailHelper
             }
             // Save the token to a file.
             if (!file_exists(dirname($tokenPath))) {
-                mkdir(dirname($tokenPath), 0700, true);
+                mkdir(dirname($tokenPath), 0777, true);
             }
             file_put_contents($tokenPath, json_encode($client->getAccessToken()));
         }
