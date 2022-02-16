@@ -3,17 +3,20 @@
     "description": "",
     "minimum-stability": "stable",
     "license": "Apache-2.0",
-    "authors": [{
+    "authors": [
+        {
             "name": "Sam",
             "email": "sam@mixmedia.com"
         }
     ],
     "require": {
-        "php": "^7.0",
+        "php": "~7.2||~8.0",
         "google/apiclient": "v2.2.2",
+        "nelexa/zip": "^3.1",
+        "nesbot/carbon": "^1.39",
         "rappasoft/laravel-helpers": "^1.0",
-        "ulrichsg/getopt-php": "^3.2",
-        "nelexa/zip": "^3.1"
+        "symfony/var-dumper": "^3.3",
+        "ulrichsg/getopt-php": "^3.2"
     },
     "require-dev": {
         "phpunit/phpunit": "6.5.13",
@@ -36,7 +39,9 @@
         "preferred-install": "dist",
         "sort-packages": true
     },
-    "bin": ["zurich-sis-report-reader"],
+    "bin": [
+        "zurich-sis-report-reader"
+    ],
     "scripts": {
         "build": [
             "php -d phar.readonly=0 \"./vendor/macfja/phar-builder/bin/phar-builder\" package composer.json"
