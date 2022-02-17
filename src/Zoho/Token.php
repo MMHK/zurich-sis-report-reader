@@ -23,7 +23,6 @@ class Token implements \Serializable
     {
         $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
-        $this->httpClient = new Client($this->defaultParams);
         $this->raw = $data;
         $this->expired_at = Carbon::now()->addSeconds($this->getExpiresIn());
     }
@@ -75,7 +74,7 @@ class Token implements \Serializable
      */
     public function getAuthHeaders() {
         return [
-            'Authorization' => "Zoho-oauthtoken {$this->getAccessToken()}",
+            'Authorization' => "{$this->getTokenType()} {$this->getAccessToken()}",
         ];
     }
 
@@ -89,7 +88,7 @@ class Token implements \Serializable
             ],
         ];
 
-        $resp = $this->httpClient->request('POST', self::ENDPOINT_REFRESH_TOKEN, $params);
+        $resp = $this->request('POST', self::ENDPOINT_REFRESH_TOKEN, $params);
         $token = $this->handleResponse($resp);
 
         $this->raw = array_merge($this->raw, $token);
@@ -111,7 +110,6 @@ class Token implements \Serializable
         $this->clientId = array_get($base, 'client_id');
         $this->clientSecret = array_get($base, 'client_secret');
         $this->expired_at = Carbon::createFromTimestamp(array_get($base, 'expired_at'), 0);
-        $this->httpClient = new Client($this->defaultParams);
 
         $base = array_except($base, ['client_id', 'client_secret', 'expired_at']);
         $this->raw = $base;

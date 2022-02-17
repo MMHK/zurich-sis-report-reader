@@ -1,4 +1,5 @@
 /composer.lock
-/tests/secret/token.json
+/tests/secret/*
 /.idea
 /vendor
+/temp/*

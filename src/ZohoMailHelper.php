@@ -7,6 +7,8 @@ namespace MMHK;
 use GuzzleHttp\Client;
 use MMHK\common\withCache;
 use MMHK\Zoho\HttpClient;
+use MMHK\Zoho\MailAttachment;
+use MMHK\Zoho\MailMessage;
 use MMHK\Zoho\OAuth;
 
 class ZohoMailHelper extends GmailHelper
@@ -17,6 +19,9 @@ class ZohoMailHelper extends GmailHelper
     use HttpClient;
     use withCache;
 
+    /**
+     * @var \MMHK\Zoho\Token|null
+     */
     protected $token;
 
     /**
@@ -30,7 +35,6 @@ class ZohoMailHelper extends GmailHelper
         if (!file_exists($this->temp_path)) {
             mkdir($this->temp_path, 0777, true);
         }
-        $this->httpClient = new Client($this->defaultParams);
         $this->initToken();
     }
 
@@ -77,20 +81,30 @@ class ZohoMailHelper extends GmailHelper
 
     public function handleResponse(\Psr\Http\Message\ResponseInterface $resp)
     {
+        $mimeType = $resp->getHeaderLine('Content-Type');
+        $httpStatusCode = $resp->getStatusCode();
         $content = $resp->getBody()->getContents();
 
-        $json = json_decode($content, true);
+        if (stripos($mimeType, 'json') !== false) {
+            $json = json_decode($content, true);
 
-        $stateCode = array_get($json, 'status.code', 0);
-        if ($stateCode != 200) {
-            throw new \Exception($json['description']);
+            $stateCode = array_get($json, 'status.code', 0);
+            if ($stateCode != 200) {
+                throw new \Exception($content);
+            }
+
+            if (array_key_exists('error', $json)) {
+                throw new \Exception($json['error']);
+            }
+
+            return array_get($json, 'data', []);
         }
 
-        if (array_key_exists('error', $json)) {
-            throw new \Exception($json['error']);
+        if ($httpStatusCode != 200) {
+            throw new \Exception($content, $httpStatusCode);
         }
 
-        return array_get($json, 'data', []);
+        return $content;
     }
 
 
@@ -98,16 +112,22 @@ class ZohoMailHelper extends GmailHelper
         $params = array_merge([
             'headers' => $this->token->getAuthHeaders(),
         ], $params);
-        $resp = $this->httpClient->request($method, sprintf('http://mail.zoho.com/api/%s', $uri), $params);
+
+        $resp = $this->request($method, sprintf('https://mail.zoho.com/api/%s', $uri), $params);
 
         return $this->handleResponse($resp);
     }
 
-    public function getAccountID($emailAddress) {
+    public function getAccountID($emailAddress = null) {
         $accountList = $this->call('GET', 'accounts');
-        $account = array_first($accountList, function($index, $row) use ($emailAddress) {
-            return array_get($row, 'mailboxAddress') == $emailAddress;
-        });
+        if (!empty($emailAddress)) {
+            $account = array_first($accountList, function($index, $row) use ($emailAddress) {
+                return array_get($row, 'mailboxAddress') == $emailAddress;
+            });
+        } else {
+            $account = array_get($accountList, '0');
+        }
+
         if (!empty($account)) {
             return $account['accountId'];
         }
@@ -117,78 +137,133 @@ class ZohoMailHelper extends GmailHelper
     public function getMailList($accountId, $limit = 500, $query = null) {
         $q = $query ?: 'sender:zurich.fwd@mixmedia.com::subject:SIS API Upload';
 
-        return $this->call('GET', sprintf('accounts/%d/messages/search', $accountId), [
+        $list = $this->call('GET', sprintf('accounts/%d/messages/search', $accountId), [
            'query' => [
                'searchKey' => $q,
                'limit' => $limit,
            ],
         ]);
+
+        return array_map(function($row) use ($accountId) {
+            $data = array_merge($row, compact('accountId'));
+            $msg = new MailMessage($data);
+
+            return $msg;
+        }, $list);
     }
 
-    public function getMailDetail($messageID) {
+    public function extendMessage(MailMessage $message) {
+        $message = $this->fillContent($message);
+        $message = $this->fillAttachments($message);
 
+        return $message;
+    }
+    /**
+     * @param MailMessage $message
+     * @return MailMessage
+     */
+    public function fillContent(MailMessage $message) {
+        $result = $this->call('GET', sprintf('accounts/%d/folders/%d/messages/%d/content'
+            , $message->getAccountId(), $message->getFolderId(), $message->getMessageID()));
+
+        $message->offsetSet('content', $result['content']);
+
+        return $message;
     }
 
+    public function fillAttachments(MailMessage $message) {
+        if (!$message->hasAttachment()) {
+            return $message;
+        }
+
+        $attachmentinfo = $this->call('GET', sprintf('accounts/%d/folders/%d/messages/%d/attachmentinfo'
+            , $message->getAccountId(), $message->getFolderId(), $message->getMessageID()));
+        $attachmentList = array_get($attachmentinfo, 'attachments', []);
+
+        $attachmentList = array_map(function($row) use ($message) {
+            $attachmentId = array_get($row, 'attachmentId');
+            $content = $this->call('GET', sprintf('accounts/%d/folders/%d/messages/%d/attachments/%d'
+                , $message->getAccountId(), $message->getFolderId(), $message->getMessageID(), $attachmentId));
+            $data = array_merge($row, compact('content'));
+            return new MailAttachment($data);
+        }, $attachmentList);
+
+        $message->offsetSet('attachments', $attachmentList);
+
+        return $message;
+    }
+
+    public function saveAttachment(MailMessage $message) {
+        $attachmentList = $message->getAttachments();
+        foreach ($attachmentList as $attachment) {
+            /**
+             * @var $attachment \MMHK\Zoho\MailAttachment
+             */
+            $save_file_name = $this->temp_path . '/' . $message->getHash() . '_' . $attachment->getAttachmentName();
+            if (file_exists($save_file_name)) {
+                continue;
+            }
+            file_put_contents($save_file_name, $attachment->getContent());
+        }
+    }
 
     public function run($limit = 500, $query = null) {
-        $service = $this->getGmailService();
-
-        $page_token = 0;
-        $list = [];
-        $q = $query ?: 'from:(IT-GI@hk.zurich.com) subject:(SIS API Upload to SIS Report for motors.com.hk)';
-        while ($page_token !== null) {
-            $resp = $service->users_messages->listUsersMessages('me', [
-                'includeSpamTrash' => true,
-                'maxResults' => $limit,
-                'pageToken' => $page_token,
-                'q' => $q
-            ]);
-            $new_list = $resp->getMessages();
-            if (!empty($new_list)) {
-                $list = array_merge($list, $new_list);
-            } else {
-                break;
-            }
-            $page_token = $resp->getNextPageToken();
-        }
+        $accountID = $this->getAccountID();
+        $list = $this->getMailList($accountID, $limit, $query);
 
         $total = count($list);
         echo sprintf("total get record:[%d]\n", $total);
         $index = 1;
         $list = array_map(function ($row) use ($total, &$index) {
             /**
-             * @var $row \Google_Service_Gmail_Message
+             * @var $row \MMHK\Zoho\MailMessage
              */
+            $cached = $this->getCache($row->getMessageID());
+            if (empty($cached)) {
+                $cached = $this->extendMessage($row);
+                $cached = $this->setCache($row->getMessageID(), $cached);
+            }
             echo sprintf("begin get detail:[%d/%d]\n", $index, $total);
             $index++;
-            return $this->getMailDetail($row->getId());
+            return $cached;
         }, $list);
 
         $has_attachment_list = array_values(array_filter($list, function ($row){
-            return !empty($row['attachment_id']);
+            /**
+             * @var $row \MMHK\Zoho\MailMessage
+             */
+            return $row->hasAttachment();
         }));
 
         echo sprintf("total get attachment record:[%d]\n", count($has_attachment_list));
 
         $pwd_list = array_values(array_filter($list, function ($row){
-            return !empty($row['password']);
+            /**
+             * @var $row \MMHK\Zoho\MailMessage
+             */
+            return !empty($row->getPwd());
         }));
 
         echo sprintf("total get password record:[%d]\n", count($pwd_list));
 
         $attachment_count = count($has_attachment_list);
         foreach ($has_attachment_list as $i => $row) {
-            $this->downloadAttachment($row['attachment_hash'], $row['filename'],
-                $row['msg_id'], $row['attachment_id']);
+            /**
+             * @var $row \MMHK\Zoho\MailMessage
+             */
+            $this->saveAttachment($row);
 
-            echo sprintf("downloaded attachment [%d/%d].\n", $i,  $attachment_count);
+            echo sprintf("downloaded attachment [%d/%d].\n", ($i+1),  $attachment_count);
         }
 
         $pwd_count = count($pwd_list);
         foreach ($pwd_list as $j => $row) {
-            $this->unzip($row['attachment_hash'], $row['password']);
+            /**
+             * @var $row \MMHK\Zoho\MailMessage
+             */
+            $this->unzip($row->getHash(), $row->getPwd());
 
-            echo sprintf("unzip attachment [%d/%d].\n", $j,  $pwd_count);
+            echo sprintf("unzip attachment [%d/%d].\n", ($j+1),  $pwd_count);
         }
     }
 }

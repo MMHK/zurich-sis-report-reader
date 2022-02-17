@@ -8,6 +8,7 @@ class OAuth
 {
     const SCOPE_EMAIL_READ = 'ZohoMail.messages.READ';
     const SCOPE_ACCOUNT_READ = 'ZohoMail.accounts.READ';
+    const SCOPE_FOLDER_READ = 'ZohoMail.folders.READ';
     const ENDPOINT_CODE = 'https://accounts.zoho.com/oauth/v3/device/code';
     const ENDPOINT_TOKEN = 'https://accounts.zoho.com/oauth/v3/device/token';
 
@@ -23,7 +24,7 @@ class OAuth
             ],
         ];
 
-        $resp = $this->httpClient->request('POST', self::ENDPOINT_CODE, $params);
+        $resp = $this->request('POST', self::ENDPOINT_CODE, $params);
 
         return $this->handleResponse($resp);
     }
@@ -43,7 +44,7 @@ class OAuth
             ],
         ];
 
-        $resp = $this->httpClient->request('POST', self::ENDPOINT_TOKEN, $params);
+        $resp = $this->request('POST', self::ENDPOINT_TOKEN, $params);
 
         $resp = $this->handleResponse($resp);
 
